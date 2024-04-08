@@ -1,6 +1,11 @@
 # Prerequisites
 *.d
 
+ITK-4.13.3/
+ITK-4.13.3/build
+build/
+bin/
+
 # Compiled Object files
 *.slo
 *.lo
