@@ -5,6 +5,11 @@ ITK-4.13.3/
 ITK-4.13.3/build
 build/
 bin/
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+CMakeTmp/
+*.cmake
 
 # Compiled Object files
 *.slo

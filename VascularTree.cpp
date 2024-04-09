@@ -1,4 +1,51 @@
-#pragma warning(disable:4786)
+/*=========================================================================
+ 
+	Program: VascuSynth
+	Module: $RCSfile: VascularTree.cpp,v $
+	Language: C++
+	Date: $Date: 2011/02/08 10:43:00 $
+	Version: $Revision: 1.0 $
+
+Copyright (c) 2011 Medical Imaging Analysis Lab, Simon Fraser University, 
+British Columbia, Canada.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+
+* The name of the Insight Consortium, nor the names of any consortium members,
+nor of any contributors, may be used to endorse or promote products derived
+from this software without specific prior written permission.
+
+* Modified source versions must be plainly marked as such, and must not be
+misrepresented as being the original software.
+ 
+* Free for non-commercial use only.  For commercial use, explicit approval 
+must be requested by contacting the Authors.
+
+* If you use the code in your work, you must acknowledge it
+
+* Modifications of the source code must also be released as open source 
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS ``AS IS''
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+=========================================================================*/
 
 #include <cmath>
 #include <iostream>
@@ -11,16 +58,19 @@
 
 using namespace std;
 
-VascularTree::VascularTree(OxygenationMap * _oxMap, double* _perf, double _Pperf, double _Pterm, double _Qperf, double _row, double _gamma, double _lambda, double _mew, double _minDistance, int _numNodes, double _voxelWidth, int _closestNeighbours){
+/**  
+ * 	Constructor
+ */				
+VascularTree::VascularTree(OxygenationMap * _oxMap, double* _perf, double _Pperf, double _Pterm, double _Qperf, double _rho, double _gamma, double _lambda, double _mu, double _minDistance, int _numNodes, double _voxelWidth, int _closestNeighbours){
 	oxMap = _oxMap;
 	perf = new double[3]; perf[0] = _perf[0]; perf[1] = _perf[1];perf[2] = _perf[2];
 	Pperf = _Pperf;
 	Pterm = _Pterm;
 	Qperf = _Qperf;
-	row = _row;
+	rho = _rho;
 	gamma = _gamma;
 	lambda = _lambda;
-	mew = _mew;
+	mu = _mu;
 	minDistance = _minDistance;
 	mapVoxelWidth = _voxelWidth;
 	Qterm = _Qperf/_numNodes;
@@ -31,7 +81,9 @@ VascularTree::VascularTree(OxygenationMap * _oxMap, double* _perf, double _Pperf
 	nt.addNode(NodeTable::ROOT, perf, -1, 1, 1, Qperf, -1, -1);
 }
 
-//calculate the distance between to nodes in the node table
+/** 
+ * Calculates the distance between to nodes in the node table.
+ */
 double VascularTree::distance(int from, int to){
 	double* fromPos = nt.getPos(from);
 	double* toPos = nt.getPos(to);
@@ -42,22 +94,26 @@ double VascularTree::distance(int from, int to){
 				pow(fromPos[2] - toPos[2], 2))*mapVoxelWidth;
 }
 
-//calculate the reduced resistence of segment @ id
+/**
+ * Calculates the reduced resistence of segment at id.
+ */
 void VascularTree::calculateReducedResistence(int id){
 	if(nt.getType(id) == NodeTable::TERM){
-		double acc = (8.0 * row * distance(id, nt.getParent(id))/PI); 
+		double acc = (8.0 * rho * distance(id, nt.getParent(id))/PI); 
 		nt.setReducedResistence(id, acc);
 	} else {
 		double acc = 0;
 		acc += pow(nt.getLeftRatio(id), 4) / nt.getReducedResistance(nt.getLeftChild(id));
 		acc += pow(nt.getRightRatio(id), 4) / nt.getReducedResistance(nt.getRightChild(id));
 		acc = 1.0 / acc;
-		acc += (8.0 * row * distance(id, nt.getParent(id))/PI);
+		acc += (8.0 * rho * distance(id, nt.getParent(id))/PI);
 		nt.setReducedResistence(id, acc);
 	}
 }
 
-//calculates the ratio of radii of the segment @ id
+/**
+ * Calculates the ratio of radii of the segment at id.
+ */
 void VascularTree::calculateRatios(int id){
 	int left = nt.getLeftChild(id);
 	int right = nt.getRightChild(id);
@@ -69,7 +125,9 @@ void VascularTree::calculateRatios(int id){
 	nt.setRightRatio(id, pow((1 + pow(left_over_right, gamma)), (-1.0)/gamma));
 }
 
-//update the tree @ the bifurication point @ id
+/**
+ * Updates the tree at the bifurication point at id.
+ */
 void VascularTree::updateAtBifurication(int id, int newChild){
 	if(nt.getType(id) != NodeTable::ROOT){		
 		calculateReducedResistence(newChild);
@@ -81,7 +139,9 @@ void VascularTree::updateAtBifurication(int id, int newChild){
 	}
 }
 
-//calculate the radii throughout the tree
+/**
+ * Calculates the radii throughout the tree.
+ */
 void VascularTree::calculateRadius(){
 	//the child of the root (perferation) node defines the root segment
 	int rootChild = nt.getLeftChild(0);
@@ -93,6 +153,9 @@ void VascularTree::calculateRadius(){
 	calculateRadius(rootChild);
 }
 
+/**
+ * Calculates the radius at id.
+ */
 void VascularTree::calculateRadius(int id){
 	if(nt.getType(id) == NodeTable::TERM)
 		return;
@@ -107,10 +170,17 @@ void VascularTree::calculateRadius(int id){
 	calculateRadius(right);
 }
 
+/**
+ * Calculates the fitness.
+ */
 double VascularTree::calculateFitness(){
-	double acc = 0;
-	for(int i = 1; i < nt.nodes.size(); i++){
-		acc += pow(distance(i, nt.getParent(i)), mew) * pow(nt.getRadius(i), lambda);
+	
+    //stupid but you have to cast it otherwise it will throw a warning
+    int size = (int) nt.nodes.size();
+    double acc = 0;
+    
+	for(int i = 1; i < size; i++){
+		acc += pow(distance(i, nt.getParent(i)), mu) * pow(nt.getRadius(i), lambda);
 	}
 	
 	return acc;
@@ -118,11 +188,14 @@ double VascularTree::calculateFitness(){
 
 /**
  * When used by local optimization, ignored is the segment to connect to
- * otherwise it sould be -1;
+ * otherwise it should be -1;
  */
 bool VascularTree::validateCandidate(double* x0, int ignored){
 	
-	for(int i = 1; i < nt.nodes.size(); i++){
+    //stupid but you have to cast it otherwise it will throw a warning
+    int size = (int) nt.nodes.size();
+    
+	for(int i = 1; i < size; i++){
 		if(i != ignored){
 			double distance = pointSegmentDistance(x0, i);
 			if(distance < minDistance)
@@ -133,15 +206,18 @@ bool VascularTree::validateCandidate(double* x0, int ignored){
 	return true;
 }
 
-//connect point to segment through bifPoint
+/**
+ * Connects the candidate node to a segment through the
+ * bifurcation point bifPoint.
+ */
 void VascularTree::connectPoint(double* point, int segment, double* bifPoint){
 	if(nt.getType(segment) == NodeTable::ROOT){
-		nt.addNode(NodeTable.TERM, point, segment, 1, 1, Qterm, -1, -1);
+		nt.addNode(NodeTable::TERM, point, segment, 1, 1, Qterm, -1, -1);
 		nt.setLeftChild(0, 1);
 		nt.setRightChild(0, 1);
 		calculateReducedResistence(1);
 	} else {
-		// *--- <I_seg> --- *
+		/* *--- <I_seg> --- *
 		//			
 		//			becomes
 		//
@@ -160,7 +236,8 @@ void VascularTree::connectPoint(double* point, int segment, double* bifPoint){
 		// 	I_con = I_seg with the exception of parent (which is set to I_biff
 		//  I_seg's parent updates its child to be I_biff
 		//  I_new = is a new segment wich is trivially built
-		//  I_biff is built using I_new and I_con
+		//  I_biff is built using I_new and I_con */
+        
 		int biffId = nt.nodes.size();
 		int newId = biffId + 1;
 		
@@ -175,22 +252,26 @@ void VascularTree::connectPoint(double* point, int segment, double* bifPoint){
 		if(oldParent > 0)
 			incrementFlow(oldParent, Qterm);
 		
-		nt.addNode(NodeTable.BIF, bifPoint, oldParent, 1, 1, nt.getFlow(segment) + Qterm, segment, newId);
-		nt.addNode(NodeTable.TERM, point, biffId, 1, 1, Qterm, -1, -1);
+		nt.addNode(NodeTable::BIF, bifPoint, oldParent, 1, 1, nt.getFlow(segment) + Qterm, segment, newId);
+		nt.addNode(NodeTable::TERM, point, biffId, 1, 1, Qterm, -1, -1);
 		
 		calculateReducedResistence(segment);
 		updateAtBifurication(biffId, newId);
 	}
 }
 
-//update the flow throughout the tree
+/**
+ * Updates the flow throughout the tree.
+ */
 void VascularTree::incrementFlow(int parent, double Qterm){
 	nt.setFlow(parent, nt.getFlow(parent)+Qterm);
 	if(nt.getParent(parent) > 0)
 		incrementFlow(nt.getParent(parent), Qterm);
 }
 
-//the distance between a point and a segment
+/**
+ * Returns the distance between a point and a segment.
+ */
 double VascularTree::pointSegmentDistance(double* x0, int segment){
 	double *pos1 = nt.getPos(segment);
 	double *pos2 = nt.getPos(nt.getParent(segment));
@@ -218,7 +299,10 @@ double VascularTree::pointSegmentDistance(double* x0, int segment){
 	}
 }
 
-//optimize the location of a bifurication point for terminal node point and segment 'segment'
+/**
+ * Optimizes the location of a bifurication point for terminal node 
+ * point and segment 'segment'
+ */
 double* VascularTree::localOptimization(double * point, int segment, int steps){
 	double bestFitness = 1e200;
 
@@ -363,7 +447,9 @@ double* VascularTree::localOptimization(double * point, int segment, int steps){
 	return ret;
 }
 
-//determine if point is in the volume
+/**
+ * Determines if point is in the volume.
+ */
 bool VascularTree::inVolume(double* point){
 	if(point[0] < 0 || point[0] >= oxMap->dim[0])
 		return false;
@@ -375,14 +461,26 @@ bool VascularTree::inVolume(double* point){
 	return true;
 }
 
-//try to attach point to the tree
+/**
+ *  Connects the candidate node to the closestNeighbour segments
+ *  with an optimized bifurcation location (originally the midpoint of the segment.
+ *  The conceptually connected segment that yields the smallest objective
+ *  function is elected.
+ */
 bool VascularTree::connectCandidate(double* point, int steps){
-	if(!validateCandidate(point, -1))
+	
+	//cout << "connect candidate" << endl;
+	
+	if(!validateCandidate(point, -1)) {
 		return false;	//candiate is too close to an existing segment
+	}
 	
 	if(nt.nodes.size() == 1){
-		if(!oxMap->visible(nt.getPos(0), point))
-			return false;
+		
+		if(!oxMap->visible(nt.getPos(0), point)) {
+			return false;			
+		}
+		
 		connectPoint(point, 0, NULL);
 		return true;
 	}
@@ -393,10 +491,12 @@ bool VascularTree::connectCandidate(double* point, int steps){
 	int bestSegment = 0;
 	
 	map<int, double> distances;
-	int i, j;
+	int i; 
+    int j;
 	
 	//determine the distance between the point and each segment
-	for(i = 1; i < nt.nodes.size(); i++){
+	int size = (int) nt.nodes.size();
+    for(i = 1; i < size; i++){
 		double d = pointSegmentDistance(point, i);
 		distances[i] = d;
 	}
@@ -452,21 +552,32 @@ bool VascularTree::connectCandidate(double* point, int steps){
 	return true;
 }
 
-//build the tree
+/**
+ * iteratively builds a tree by selecting candidate nodes based on an oxygenation demand map
+ * and then connecting that candidate node to a series of closest segments at the midpoint of the
+ * segment.  The resulting new segment that yields the smallest objective function is selected and 
+ * added to the tree.  The oxygenation map is updated - reducing values proximal to the candidate node.
+ *
+ * finally the radii are calcualted recursively by calculating the ratio of the radius of the child over parent,
+ * and multiplying that by the radius of the parent to ascertain the radius.
+ */
 void VascularTree::buildTree(){
+	
 	int count = 0;
 	double cand[3];
 	int term[3];
 	while(count < numNodes){
+		
 		double sum = oxMap->sum();
 		oxMap->candidate(sum, term);
-				
 		cand[0] = term[0]; cand[1] = term[1]; cand[2] = term[2];
 		if(connectCandidate(cand, 20)){
 			count++;
 			oxMap->applyCandidate(term);
 		}
+		
 	}
 	
 	calculateRadius();
+	
 }
