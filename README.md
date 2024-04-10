@@ -1,5 +1,7 @@
 # VascuSynth
 
+For more information about VascuSynth, please visit: https://vascusynth.cs.sfu.ca/
+
 Follow the steps below meticulously to compile the code base:
 
 0. `git clone https://github.com/sfu-mial/VascuSynth`
