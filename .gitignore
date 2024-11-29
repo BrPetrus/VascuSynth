@@ -40,3 +40,9 @@ CMakeTmp/
 *.exe
 *.out
 *.app
+
+.ccls-cache
+build
+.vscode
+image
+output
