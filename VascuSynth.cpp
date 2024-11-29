@@ -97,7 +97,11 @@ vector<string> * readFileLines(const char * filename){
 		oFile.close();
 		
 	} else {
-		throw "Could not open file " + ( (string) filename);
+		std::string msg = "Could not open file \'" + std::string(filename) + "\' for reading\n";
+		// + "\' for reading\n"; 
+		//std::cerr << "Could not open file '" << filename << "' for reading." << std::endl;
+		std::cerr << msg;
+		throw std::runtime_error(msg); 
 	}
 	
 	return lines;
