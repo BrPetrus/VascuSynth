@@ -3,3 +3,8 @@ p2.txt
 p3.txt
 p4.txt
 p5.txt
+p6.txt
+p7.txt
+p8.txt
+p9.txt
+p10.txt

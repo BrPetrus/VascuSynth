@@ -659,6 +659,9 @@ int main(int argc, char** argv){
         //read the param files and image name files
         vector<string> *paramFiles = readFileLines(argv[1]);
         vector<string> *imageNameFiles = readFileLines(argv[2]);
+		if (paramFiles->size() != imageNameFiles->size()) {
+			throw "The number of parameter files and image name files do not match";
+		}
 
         //voxel widths
         string voxelWidth = argv[3];
