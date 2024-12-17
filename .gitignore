@@ -45,4 +45,6 @@ CMakeTmp/
 build
 .vscode
 image
-output
+output/
+dataset/
+*.zip
